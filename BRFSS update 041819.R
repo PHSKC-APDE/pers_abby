@@ -11,15 +11,17 @@ brfss <- read.xlsx(file.path(chi_path, "BRFSS_combined_tableau_suppressed.xlsx")
 
 brfss_path <- "//Phshare01/epe_share/WORK/CHI Visualizations/BRFSS Indicators (all)/BRFSS (all)/BRFSS 2017 indicator updates/NewFormat"
 
+# look into paste functions
+
 #import new indicator data
-ecig <-  read.xlsx(file.path(brfss_path, "ECIGA_suppress_2019-0516 (new format).xlsm"), sheet="results")
-smoker <- read.xlsx(file.path(brfss_path, "CIGA_suppress_2019-0516 (new format).xlsm"), sheet="results") 
-firearm <- read.xlsx(file.path(brfss_path, "GUNHOME_suppress_2019-0516 (new format).xlsm"), sheet="results") 
+ecig <-  read.xlsx(file.path(brfss_path, "ECIGA_suppress_2019-0523 (new format).xlsm"), sheet="results")
+smoker <- read.xlsx(file.path(brfss_path, "CIGA_suppress_2019-0523 (new format).xlsm"), sheet="results") 
+firearm <- read.xlsx(file.path(brfss_path, "GUNHOME_suppress_2019-0523 (new format).xlsm"), sheet="results") 
 # replace with suppressed version!
-obese <- read.xlsx(file.path(brfss_path, "OBEA_nosuppress_2019-0516 (new format).xlsm"), sheet="results")
-physact <- read.xlsx(file.path(brfss_path, "PHYSAMET_suppress_2019-0516 (new format).xlsm"), sheet="results")
-physact1824 <- read.xlsx(file.path(brfss_path, "PHYSAMET1824_suppress_2019-0516 (new format).xlsm"), sheet="results")
-mjuse <- read.xlsx(file.path(brfss_path, "MJUSE_suppress_2019-0516 (new format).xlsm"), sheet="results")
+obese <- read.xlsx(file.path(brfss_path, "OBEA_suppress_2019-0523 (new format).xlsm"), sheet="results")
+physact <- read.xlsx(file.path(brfss_path, "PHYSAMET_suppress_2019-0523 (new format).xlsm"), sheet="results")
+physact1824 <- read.xlsx(file.path(brfss_path, "PHYSAMET1824_suppress_2019-0523 (new format).xlsm"), sheet="results")
+mjuse <- read.xlsx(file.path(brfss_path, "MJUSE_suppress_2019-0523 (new format).xlsm"), sheet="results")
 
 # combine new indicators into single table
 brfss_new <-bind_rows(ecig, smoker, firearm, obese, physact, physact1824, mjuse) 
