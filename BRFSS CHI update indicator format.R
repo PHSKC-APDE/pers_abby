@@ -44,10 +44,8 @@ brfss_new = bind_rows(brfss_new)
 # list new indicators that were imported
 keys = brfss_new[, 'indicator_key', drop=T] %>% unique
 
-
-# delete old versions of indicators from existing BRFSS table and replace with updated data
-brfss_updated <- brfss %>% 
-  filter(!Indicator %in% c(keys,"_pastaer")) %>% 
+#reformat old brfss data into new Tableau-ready output format
+brfss_old <- brfss %>% 
 #update category labels
     mutate(
         chi = 1,
@@ -56,27 +54,30 @@ brfss_updated <- brfss %>%
         Tab == "SmallGroups" ~ "crosstabs",
         Tab == "_King County" ~ "_kingco",
         Tab == "Trends" ~ "trends"),
+      Cat1varname = case_when(
+        Cat1varname == 'mrace' ~ "race3",
+        TRUE ~ Cat1varname),
+      Cat2varname = case_when(
+        Cat2varname == 'mrace' ~ "race3",
+        TRUE ~ Cat2varname),
       Category1 = case_when(
-        Category1 == "Race/Ethnicity" ~ "Race/ethnicity",
+        #Category1 == "Race/Ethnicity" ~ "Race/ethnicity",
+        Cat1varname == 'race3' & Group == "Hispanic" ~ 'Ethnicity',
+        (Cat1varname == 'race3' & Group != "Hispanic") | Cat1varname == 'race4' ~ 'Race',
         Category1 == "Health Reporting Areas" ~ "Cities/neighborhoods",
         Category1 == "Income" ~ "Household income",
         Category1 == "Household Income" ~ "Household income",
         Category1 == "King County regions" ~ "Regions",
         TRUE ~ Category1),
       Category2 = case_when(
-        Category2 == "Race/Ethnicity" ~ "Race/ethnicity",
+        #Category2 == "Race/Ethnicity" ~ "Race/ethnicity",
+        Cat2varname == 'race3' & Group == "Hispanic" ~ 'Ethnicity',
+        (Cat2varname == 'race3' & Group != "Hispanic") | Cat2varname == 'race4' ~ 'Race',
         Category2 == "Health Reporting Areas" ~ "Cities/neighborhoods",
         Category2 == "King County regions" ~ "Regions",
         Category2 == "Region" ~ "Regions",
         Tab == "Subgroups" ~ "Overall",
         TRUE ~ Category2),
-      Cat1varname = case_when(
-        Cat1varname == 'mrace' ~ "race3",
-        TRUE ~ Cat1varname),
-      Cat2varname = case_when(
-        Cat2varname == 'mrace' ~ "race3",
-        Tab == "Subgroups" ~ "Overall",
-        TRUE ~ Cat2varname),
       Group = case_when(
         Group == 'Fed Way-Dash Point/Woodmont' ~ 'Fed Way-Dash Pt',
         Group == '>=$100,000' ~ '$100,000+',
@@ -140,28 +141,24 @@ rename("indicator_key" ="Indicator",
         "denominator" = "Sample_size",
         "suppression" = "Suppress",
         "run_date" = "runid") %>% 
-  select(data_source, indicator_key, tab, year, cat1, cat1_group, cat1_group_alias, cat1_varname, cat2, cat2_group, cat2_group_alias, cat2_varname, result, lower_bound, upper_bound, se, rse, comparison_with_kc, time_trends, significance, caution, numerator, denominator, chi, run_date) %>% 
-  bind_rows(., brfss_new) 
+  select(data_source, indicator_key, tab, year, cat1, cat1_group, cat1_group_alias, cat1_varname, cat2, cat2_group, cat2_group_alias, cat2_varname, result, lower_bound, upper_bound, se, rse, comparison_with_kc, time_trends, significance, caution, numerator, denominator, chi, run_date)
   
-# metadata
+  
+# delete old versions of indicators from existing BRFSS table and replace with updated data
+brfss_updated <- brfss_old %>% 
+  filter(!indicator_key %in% c(keys,"_pastaer")) %>% 
+  bind_rows(., brfss_new) 
+
+# metadata - read in metadata from all new indicator files
 brfss_metadata <- read.xlsx(file.path(chi_path, "BRFSS_combined_tableau_suppressed.xlsx"), sheet=2)
 
-# 
-# ecig_meta <-  read.xlsx(file.path(brfss_path, "ECIGA_suppress_2019-0516 (new format).xlsm"), sheet="metadata")
-# smoker_meta <- read.xlsx(file.path(brfss_path, "CIGA_suppress.xlsm"), sheet="metadata")
-# firearm_meta <- read.xlsx(file.path(brfss_path, "GUNHOME_suppress.xlsm"), sheet="metadata") 
-# obese_meta <- read.xlsx(file.path(brfss_path, "OBEA_suppress.xlsm"), sheet="metadata") 
-# physact_meta <- read.xlsx(file.path(brfss_path, "PHYSAMET_suppress.xlsm"), sheet="metadata") 
-# physact1824_meta <- read.xlsx(file.path(brfss_path, "PHYSAMET1824_suppress.xlsm"), sheet="metadata") 
-# mjuse_meta <- read.xlsx(file.path(brfss_path, "MJUSE_suppress.xlsm"), sheet="metadata")
-# 
-# brfss_meta_new <-bind_rows(ecig_meta, smoker_meta, firearm_meta, obese_meta, physact_meta,physact1824_meta, mjuse_meta) %>% 
 
-brfss_meta <- lapply(file.path(brfss_path, files), function(x){
+brfss_meta_new <- lapply(file.path(brfss_path, files), function(x){
   a = read_excel(x, sheet = 'metadata')
   return(a)
 })
 
+# combine into single metadata 
 brfss_meta_new = bind_rows(brfss_meta) %>% 
   filter(!is.na(indicator_key)) %>% 
   mutate(latest_year_result = as.numeric(gsub('%', "", latest_year_result))/100,
@@ -199,7 +196,38 @@ brfss_meta_updated <- brfss_metadata %>%
   select (data_source, indicator_key, result_type, valence, latest_year, latest_year_result, latest_year_kc_pop, latest_year_count, map_type, unit, valid_years, chi, run_date) %>% 
   bind_rows(., brfss_meta_new)
 
-list_of_datasets <- list("results" = brfss_updated, "metadata" = brfss_meta_updated)
+# compare new vs. updated indicators for QA using 3-point threshold to flag changes
+brfss_QA <- brfss_old %>% 
+  filter(indicator_key %in% c(keys,"_pastaer")) %>% 
+  mutate(result = if_else(indicator_key=="_pastaer", (1-result), result)) %>%
+  select(indicator_key:cat1_group, cat2:cat2_group, result) %>% 
+  rename("old_result" = "result") 
+
+QA_groups <- left_join(brfss_QA, brfss_new, by = c("indicator_key", "tab", "cat1", "cat1_group", "cat2", "cat2_group")) %>% 
+  select(indicator_key:old_result, year.y, result) %>% 
+  left_join(., select(brfss_meta_updated, indicator_key, result_type), by = "indicator_key") %>% 
+  filter(tab =="demgroups" | tab=="crosstabs") %>% 
+  mutate(difference = (result-old_result),
+         flag = case_when(
+           result_type == "proportion" & abs(difference) >= .03 ~ 'flag',
+           result_type == "mean" & abs(difference) >= 3 ~ 'flag',
+           TRUE ~ NA_character_
+         ))
+
+QA_trends <- left_join(brfss_QA, brfss_new, by = c("indicator_key", "tab", "year", "cat1", "cat1_group", "cat2", "cat2_group")) %>% 
+  filter(tab=="trends")  %>% 
+  select(indicator_key:old_result, result) %>% 
+  left_join(., select(brfss_meta_updated, indicator_key, result_type), by = "indicator_key") %>% 
+  mutate(difference = (result-old_result),
+         flag = case_when(
+           result_type == "proportion" & abs(difference) >= .03 ~ 'flag',
+           result_type == "mean" & abs(difference) >= 3 ~ 'flag',
+           TRUE ~ NA_character_
+         )) %>% 
+  filter(flag=='flag')
+
+# write results to excel
+list_of_datasets <- list("results" = brfss_updated, "metadata" = brfss_meta_updated, "QA" = QA_groups, "QA trends" = QA_trends)
 currentDate <- Sys.Date()
 xlsxFileName <- paste("//Phshare01/epe_share/WORK/CHI Visualizations/BRFSS Indicators (all)/BRFSS (all)/BRFSS_combined_tableau_suppressed_", currentDate, ".xlsx")
 write.xlsx(list_of_datasets, file = xlsxFileName)
