@@ -15,28 +15,28 @@ chi_path <- "//Phshare01/epe_share/WORK/CHI Visualizations"
 
 
 #### BRING IN DATA ####
-firearm_death <- read.xlsx(file.path(chi_path, "Death Indicators (all)",
-                              "DEATH_firearm-related_updated 2012-2016.xlsx")) %>% 
+firearm_death <- read.xlsx(file.path(chi_path, "Death Indicators (all)/Firearm Deaths/2013-2017 update/",
+                              "SQL ready_CHI Firearm Deaths 2013-17.xlsx")) %>% 
   mutate(Cat1varname = ifelse(Category1 == "King County regions", "ccreg", Cat1varname),
-         Cat1varname = ifelse(grepl("-NH", Group, fixed=TRUE), "race4", 
-                              ifelse(grepl("- NH", Group, fixed=TRUE), "race4", 
-                                     ifelse(Group == "Hispanic as Race", "race4", 
-                                            ifelse(Group == "Hispanic", "race4", 
-                                                   ifelse(Category1 == "Race/Ethnicity", "race3", Cat1varname))))), 
-         Group = recode(Group, "American Indian/Alaskan Native Only-NH" = "AIAN - NH",
-                        "American Indian/Alaskan Native Only" = "AIAN",
-                        "Black Only" = "Black",
-                        "Black Only-NH" = "Black - NH",
-                        "Asian Only" = "Asian",
-                        "Asian Only-NH" = "Asian - NH",
-                        "Hispanic as Race" = "Hispanic",
-                        "Hispanic - any race" = "Hispanic",
-                        "Pacific Islander Only-NH" = "NHPI - NH",
-                        "Pacific Islander Only" = "NHPI",
-                        "White Only-NH" = "White - NH"), 
+         # Cat1varname = ifelse(grepl("-NH", Group, fixed=TRUE), "race4", 
+         #                      ifelse(grepl("- NH", Group, fixed=TRUE), "race4", 
+         #                             ifelse(Group == "Hispanic as Race", "race4", 
+         #                                    ifelse(Group == "Hispanic", "race4", 
+         #                                           ifelse(Category1 == "Race/Ethnicity", "race3", Cat1varname))))), 
+         # Group = recode(Group, "American Indian/Alaskan Native Only-NH" = "AIAN - NH",
+         #                "American Indian/Alaskan Native Only" = "AIAN",
+         #                "Black Only" = "Black",
+         #                "Black Only-NH" = "Black - NH",
+         #                "Asian Only" = "Asian",
+         #                "Asian Only-NH" = "Asian - NH",
+         #                "Hispanic as Race" = "Hispanic",
+         #                "Hispanic - any race" = "Hispanic",
+         #                "Pacific Islander Only-NH" = "NHPI - NH",
+         #                "Pacific Islander Only" = "NHPI",
+         #                "White Only-NH" = "White - NH"), 
          Tab = ifelse(Cat1varname == "race3" & Tab != "Trends" & is.na(Cat2varname), "Subgroups", Tab),
          Cat1varname = (ifelse(Group=="White - NH", "race4", Cat1varname ))) %>%
-  select(-Comparison_with_KC, -X22, -Significance_level) %>% 
+  select(-Comparison_with_KC, -Significance_level) %>% 
   filter(!is.na(indicator_key))
 
 
@@ -59,6 +59,7 @@ death_trend <- firearm_death %>%
   mutate(Lower_bound = round(Lower_bound, digits=1),
          Upper_bound = round(Upper_bound, digits=1)) %>% 
   left_join(., death_kc, by = c("indicator_key", "Year", "Tab")) %>%
+  
   mutate(Comparison_with_KC = case_when(Suppress == "Y" ~ NA_character_,
                                         Lower_bound > ub_kc ~ "higher",
                                         Upper_bound < lb_kc ~ "lower",
@@ -72,10 +73,10 @@ firearm_death_combined <- left_join(firearm_death, death_trend, by = c("indicato
 
 
 write.xlsx(firearm_death_combined, file = file.path(chi_path, "Death Indicators (all)",
-                                            "DEATH_firearm_related_corrected_KC_comp.xlsx"))
+                                            "DEATH_firearm_related_corrected_KC_comp_2013-2017.xlsx"))
 
 death <- read.xlsx(file.path(chi_path, "Death Indicators (all)",
-                                     "death_combined_suppress_old.xlsx"))
+                                     "DEATH_combined_suppress.xlsx"))
 
 death <- death %>% 
     filter(indicator_key != "dth801000") %>% 
@@ -86,7 +87,7 @@ death <- death %>%
 
 
 write.xlsx(death, file = file.path(chi_path, "Death Indicators (all)",
-                                                    "death_combined_suppress.xlsx"))
+                                                    "DEATH_combined_suppress_060519.xlsx"))
 
 
 # #### BIRTH DATA ####
