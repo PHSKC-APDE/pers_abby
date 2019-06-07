@@ -78,16 +78,40 @@ write.xlsx(firearm_death_combined, file = file.path(chi_path, "Death Indicators 
 death <- read.xlsx(file.path(chi_path, "Death Indicators (all)",
                                      "DEATH_combined_suppress.xlsx"))
 
-death <- death %>% 
+death_updated <- death %>% 
     filter(indicator_key != "dth801000") %>% 
     rbind(firearm_death_combined) %>% 
         mutate (Rate = round(Rate, digits=1),
            Lower_bound = round(Lower_bound, digits=1),
            Upper_bound = round(Upper_bound, digits=1))
 
+# QA new indicator
+death_QA <- death %>% 
+  filter(indicator_key == "dth801000") %>% 
+  select(indicator_key:Rate) %>% 
+  rename("old_rate" = "Rate") 
 
-write.xlsx(death, file = file.path(chi_path, "Death Indicators (all)",
-                                                    "DEATH_combined_suppress_060519.xlsx"))
+# compare new vs. updated indicators for QA using 3-point threshold to flag changes
+QA_groups <- left_join(death_QA, firearm_death_combined, by = c("indicator_key", "Tab", "Category1", "Group", "Category2", "Subgroup")) %>% 
+  select(indicator_key:Rate) %>% 
+  filter(Tab !="Trends") %>% 
+  mutate(difference = (Rate-old_rate),
+         flag = ifelse(abs(difference) >= 3, 'flag',NA_character_))
+
+#compare trends to make sure rates are same for previous years
+QA_trends <- left_join(death_QA, firearm_death_combined, by = c("indicator_key", "Tab", "Year", "Category1", "Group", "Category2", "Subgroup")) %>% 
+  filter(Tab=="Trends")  %>% 
+  select(indicator_key:Rate) %>% 
+  mutate(difference = (Rate-old_rate),
+         flag = ifelse(difference != 0, 'flag', NA_character_)) %>% 
+  filter(flag=='flag')
+
+
+
+list_of_datasets <- list("results" = death, "QA" = QA_groups, "QA trends" = QA_trends)
+currentDate <- Sys.Date()
+xlsxFileName <- paste0(file.path(chi_path),"/Death Indicators (all)/", "DEATH_combined_suppress_",  currentDate, ".xlsx")
+write.xlsx(list_of_datasets, file = xlsxFileName)
 
 
 # #### BIRTH DATA ####
