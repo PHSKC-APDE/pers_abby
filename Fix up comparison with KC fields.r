@@ -108,7 +108,7 @@ QA_trends <- left_join(death_QA, firearm_death_combined, by = c("indicator_key",
 
 
 
-list_of_datasets <- list("results" = death, "QA" = QA_groups, "QA trends" = QA_trends)
+list_of_datasets <- list("results" = death_updated, "QA" = QA_groups, "QA trends" = QA_trends)
 currentDate <- Sys.Date()
 xlsxFileName <- paste0(file.path(chi_path),"/Death Indicators (all)/", "DEATH_combined_suppress_",  currentDate, ".xlsx")
 write.xlsx(list_of_datasets, file = xlsxFileName)

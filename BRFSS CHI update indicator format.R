@@ -41,6 +41,7 @@ brfss_new <- lapply(file.path(brfss_path, files), function(x){
 
 brfss_new = bind_rows(brfss_new) %>% 
   mutate(cat1 = case_when(
+    tab == 'trends' & cat1_varname == 'race3' ~ 'Race/ethnicity',
     cat1_varname == 'race3' & cat1_group == "Hispanic" ~ 'Ethnicity',
     (cat1_varname == 'race3' & cat1_group != "Hispanic") | cat1_varname == 'race4' ~ 'Race',
     TRUE ~ cat1),
@@ -48,6 +49,9 @@ brfss_new = bind_rows(brfss_new) %>%
       cat2_varname == 'race3' & cat2_group == "Hispanic" ~ 'Ethnicity',
       (cat2_varname == 'race3' & cat2_group != "Hispanic") | cat2_varname == 'race4' ~ 'Race',
       TRUE ~ cat2),
+    cat1_group_alias = case_when(
+      cat1 == "Gender" ~ cat1_group,
+      TRUE ~ cat1_group_alias),
     cat2_group_alias = case_when(
       cat2 == "Gender" ~ cat2_group,
       TRUE ~ cat2_group_alias),
@@ -55,8 +59,8 @@ brfss_new = bind_rows(brfss_new) %>%
     cat2_group = gsub(" NH", "", cat2_group),
     cat1_group_alias = gsub(" NH", "", cat1_group_alias),
     cat2_group_alias = gsub(" NH", "", cat2_group_alias)) %>% 
-   filter(!(indicator_key == '_pastaer_v2' & cat1_varname == 'hracode')) #%>%
- #  filter(!(indicator_key == '_pastaer_v2' & cat2_varname == 'hracode'))
+   filter(!(indicator_key == '_pastaer_v2' & cat1_varname == 'hracode')) %>%
+  filter(!(indicator_key == '_pastaer_v2' & tab == 'crosstabs' & cat2_varname == 'hracode'))
 
 # list new indicators that were imported
 keys = brfss_new[, 'indicator_key', drop=T] %>% unique
@@ -80,9 +84,10 @@ brfss_old <- brfss %>%
         Cat2varname == 'hispanic' ~ "race3",
         TRUE ~ Cat2varname),
       Category1 = case_when(
-        Category1 == "Race/Ethnicity" & Group == "Hispanic" ~ 'Ethnicity',
-        Category1 == "Race/Ethnicity" &  Group != "Hispanic" ~ 'Race',
-        Cat1varname == 'race3' & Group == "Hispanic" ~ 'Ethnicity',
+        Tab == 'trends' & Category1 == "Race/Ethnicity" ~ 'Race/ethnicity',
+        Tab != 'trends' & Category1 == "Race/Ethnicity" & Group == "Hispanic" ~ 'Ethnicity',
+        Tab != 'trends' & Category1 == "Race/Ethnicity" &  Group != "Hispanic" ~ 'Race',
+        Tab != 'trends' & Cat1varname == 'race3' & Group == "Hispanic" ~ 'Ethnicity',
         (Cat1varname == 'race3' & Group != "Hispanic") | Cat1varname == 'race4' ~ 'Race',
         Category1 == "Health Reporting Areas" ~ "Cities/neighborhoods",
         Category1 == "Income" ~ "Household income",
@@ -93,7 +98,7 @@ brfss_old <- brfss %>%
         #Category2 == "Race/Ethnicity" ~ "Race/ethnicity",
         Category2 == "Race/Ethnicity" & Subgroup == "Hispanic" ~ 'Ethnicity',
         Category2 == "Race/Ethnicity" &  Subgroup != "Hispanic" ~ 'Race',
-Cat2varname == 'race3' & Group == "Hispanic" ~ 'Ethnicity',
+        Cat2varname == 'race3' & Group == "Hispanic" ~ 'Ethnicity',
         (Cat2varname == 'race3' & Group != "Hispanic") | Cat2varname == 'race4' ~ 'Race',
         Category2 == "Health Reporting Areas" ~ "Cities/neighborhoods",
         Category2 == "King County regions" ~ "Regions",
@@ -186,7 +191,10 @@ brfss_meta_new = bind_rows(brfss_meta_new) %>%
   mutate(latest_year_result = as.numeric(gsub('%', "", latest_year_result))/100,
          latest_year_kc_pop = as.numeric(gsub(",", "", latest_year_kc_pop)),
          latest_year_count = as.numeric(gsub(",", "", latest_year_count)),
-         chi = as.numeric(chi)) %>% 
+         chi = as.numeric(chi),
+         map_type = ifelse(indicator_key=="_pastaer_v2", "Region", map_type),
+         valence = ifelse(indicator_key == 'firearm4', 'neutral', valence),
+         unit = ifelse(indicator_key == '_pastaer_v2', 'adults 18-24', unit)) %>% 
   rename("run_date" = "rundate")
 
 # filter(Item == "title") %>% 
@@ -208,7 +216,7 @@ brfss_meta_updated <- brfss_metadata %>%
          data_source = tolower(data_source),
          latest_year_kc_pop = NA_integer_,
          latest_year_count = NA_real_,
-         unit = "adults",
+         unit = ifelse(Indicator == "mam2yrs", "females 50-74", "adults"),
          chi = 1) %>% 
   rename("indicator_key" = "Indicator",
          "short_name" = "title",
