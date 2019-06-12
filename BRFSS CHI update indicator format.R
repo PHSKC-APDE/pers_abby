@@ -5,7 +5,7 @@ options(max.print = 350, tibble.print_max = 30, scipen = 999)
 # install.packages("readxl")
 library(tidyverse) # Manipulate data
 library(openxlsx) # Read and write Excel files
-library(readxl)
+#library(readxl)
 chi_path <- "//Phshare01/epe_share/WORK/CHI Visualizations/BRFSS Indicators (all)/BRFSS (all)"
 
 brfss <- read.xlsx(file.path(chi_path, "BRFSS_combined_tableau_suppressed.xlsx"), sheet=1)
@@ -32,7 +32,7 @@ brfss_path <- "//Phshare01/epe_share/WORK/CHI Visualizations/BRFSS Indicators (a
 files = list.files(brfss_path, pattern='*.xlsm')
 
 brfss_new <- lapply(file.path(brfss_path, files), function(x){
-  a = read_excel(x, sheet = 'results')
+  a = read.xlsx(x, sheet = 'results')
   a$numerator = as.numeric(a$numerator)
   a$denominator = as.numeric(a$denominator)
   a$chi = as.numeric(a$chi)
