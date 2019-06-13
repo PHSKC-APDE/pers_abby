@@ -1,3 +1,4 @@
+rm(list=ls())
 options(max.print = 350, tibble.print_max = 30, scipen = 999)
 
 # install.packages("tidyverse")
@@ -41,7 +42,7 @@ brfss_new <- lapply(file.path(brfss_path, files), function(x){
 
 brfss_new = bind_rows(brfss_new) %>% 
   mutate(cat1 = case_when(
-    tab == 'trends' & cat1_varname == 'race3' ~ 'Race/ethnicity',
+    tab == 'trends' & (cat1_varname == 'race3'| cat1_varname == 'race4') ~ 'Race/ethnicity',
     cat1_varname == 'race3' & cat1_group == "Hispanic" ~ 'Ethnicity',
     (cat1_varname == 'race3' & cat1_group != "Hispanic") | cat1_varname == 'race4' ~ 'Race',
     TRUE ~ cat1),
@@ -58,7 +59,8 @@ brfss_new = bind_rows(brfss_new) %>%
     cat1_group = gsub(" NH", "", cat1_group),
     cat2_group = gsub(" NH", "", cat2_group),
     cat1_group_alias = gsub(" NH", "", cat1_group_alias),
-    cat2_group_alias = gsub(" NH", "", cat2_group_alias)) %>% 
+    cat2_group_alias = gsub(" NH", "", cat2_group_alias),
+    comparison_with_kc = ifelse(comparison_with_kc == 'nodiff', 'no different', comparison_with_kc)) %>% 
    filter(!(indicator_key == '_pastaer_v2' & cat1_varname == 'hracode')) %>%
   filter(!(indicator_key == '_pastaer_v2' & tab == 'crosstabs' & cat2_varname == 'hracode'))
 
@@ -78,13 +80,28 @@ brfss_old <- brfss %>%
       Cat1varname = case_when(
         Cat1varname == 'mrace' ~ "race3",
         Cat1varname == 'hispanic' ~ "race3",
+        Category1 == 'Age' ~ "age4",
+        Category1 == 'Gender' ~ 'sex',
+        Category1 == 'Race/Ethnicity' ~ 'race3',
+        Category1 == 'Household Income' ~ 'income6',
+        Category1 == 'Sexual orientation' ~ 'sexorien2',
+        Category1 == 'King County regions' ~ 'ccreg',
+        Category1 == "Health Reporting Areas" ~ 'hracode',
+        Category1 == "King County" ~ "kingco",
         TRUE ~ Cat1varname),
       Cat2varname = case_when(
         Cat2varname == 'mrace' ~ "race3",
         Cat2varname == 'hispanic' ~ "race3",
+        Category2 == 'Age' ~ "age4",
+        Category2 == 'Gender' ~ 'sex',
+        Category2 == 'Household Income' ~ 'income6',
+        Category2 == 'Sexual orientation' ~ 'sexorien2',
+        Category2 == 'King County regions' ~ 'ccreg',
+        Category2 == "Health Reporting Areas" ~ 'hracode',
+        Category2 == "King County" ~ "kingco",
         TRUE ~ Cat2varname),
       Category1 = case_when(
-        Tab == 'trends' & Category1 == "Race/Ethnicity" ~ 'Race/ethnicity',
+        Tab == 'trends' & (Cat1varname == 'race3' | Cat1varname == 'race4') ~ 'Race/ethnicity',
         Tab != 'trends' & Category1 == "Race/Ethnicity" & Group == "Hispanic" ~ 'Ethnicity',
         Tab != 'trends' & Category1 == "Race/Ethnicity" &  Group != "Hispanic" ~ 'Race',
         Tab != 'trends' & Cat1varname == 'race3' & Group == "Hispanic" ~ 'Ethnicity',
@@ -95,7 +112,6 @@ brfss_old <- brfss %>%
         Category1 == "King County regions" ~ "Regions",
         TRUE ~ Category1),
       Category2 = case_when(
-        #Category2 == "Race/Ethnicity" ~ "Race/ethnicity",
         Category2 == "Race/Ethnicity" & Subgroup == "Hispanic" ~ 'Ethnicity',
         Category2 == "Race/Ethnicity" &  Subgroup != "Hispanic" ~ 'Race',
         Cat2varname == 'race3' & Group == "Hispanic" ~ 'Ethnicity',
@@ -181,7 +197,7 @@ brfss_metadata <- read.xlsx(file.path(chi_path, "BRFSS_combined_tableau_suppress
 
 
 brfss_meta_new <- lapply(file.path(brfss_path, files), function(x){
-  a = read_excel(x, sheet = 'metadata')
+  a = read.xlsx(x, sheet = 'metadata')
   return(a)
 })
 
