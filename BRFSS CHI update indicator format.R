@@ -32,6 +32,7 @@ brfss_path <- "//Phshare01/epe_share/WORK/CHI Visualizations/BRFSS Indicators (a
 # import new indicator data
 files = list.files(brfss_path, pattern='*.xlsm')
 
+# import each new indicator based on file suffix; change data type to numeric for num, denom, and chi columns
 brfss_new <- lapply(file.path(brfss_path, files), function(x){
   a = read.xlsx(x, sheet = 'results')
   a$numerator = as.numeric(a$numerator)
@@ -40,7 +41,9 @@ brfss_new <- lapply(file.path(brfss_path, files), function(x){
   return(a)
 })
 
+# convert new indicators from list to dataframe
 brfss_new = bind_rows(brfss_new) %>% 
+  #format new indicators
   mutate(cat1 = case_when(
     tab == 'trends' & (cat1_varname == 'race3'| cat1_varname == 'race4') ~ 'Race/ethnicity',
     cat1_varname == 'race3' & cat1_group == "Hispanic" ~ 'Ethnicity',
@@ -64,6 +67,7 @@ brfss_new = bind_rows(brfss_new) %>%
    filter(!(indicator_key == '_pastaer_v2' & cat1_varname == 'hracode')) %>%
   filter(!(indicator_key == '_pastaer_v2' & tab == 'crosstabs' & cat2_varname == 'hracode'))
 
+
 # list new indicators that were imported
 keys = brfss_new[, 'indicator_key', drop=T] %>% unique
 
@@ -71,7 +75,7 @@ keys = brfss_new[, 'indicator_key', drop=T] %>% unique
 brfss_old <- brfss %>% 
 #update category labels
     mutate(
-        chi = 1,
+      chi = 1,
       Tab = case_when(
         Tab == "Subgroups" ~ "demgroups",
         Tab == "SmallGroups" ~ "crosstabs",
