@@ -1,3 +1,9 @@
+##########################################################################################
+##BRFSS Community Health Indicators 
+## By: Abby Schachter, May 2018
+## Update BRFSS indicators to new Tableau-ready format and update data with new indicators
+#########################################################################################
+
 rm(list=ls())
 options(max.print = 350, tibble.print_max = 30, scipen = 999)
 
