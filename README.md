@@ -5,4 +5,4 @@ Abby's repository
 Store Abby's R code
 
 # notes
-CHI code
+Note note note
