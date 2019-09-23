@@ -12,7 +12,10 @@ options(max.print = 350, tibble.print_max = 30, scipen = 999)
 # install.packages("readxl")
 library(tidyverse) # Manipulate data
 library(openxlsx) # Read and write Excel files
-#library(readxl)
+library(odbc)
+
+db_store <- dbConnect(odbc(), "PHExtractStore51")
+
 chi_path <- "//Phshare01/epe_share/WORK/CHI Visualizations/BRFSS Indicators (all)/BRFSS (all)"
 
 brfss <- read.xlsx(file.path(chi_path, "BRFSS_combined_tableau_suppressed.xlsx"), sheet=1)
@@ -174,6 +177,7 @@ brfss_old <- brfss %>%
         TRUE ~ Subgroup),
       caution = ifelse(rse>30, "!", ""),
       Comparisonwith.KC = ifelse(Comparisonwith.KC == 'nodiff', 'no different', Comparisonwith.KC),
+      suppression = ifelse(Suppress == "Y", "^", ""),
       source_date = "") %>% 
 rename("indicator_key" ="Indicator", 
         "tab" = "Tab",
@@ -192,9 +196,10 @@ rename("indicator_key" ="Indicator",
         "significance" = "Significance.level",
         "numerator" = "Numerator",
         "denominator" = "Sample_size",
-        "suppression" = "Suppress",
         "run_date" = "runid") %>% 
-  select(data_source, indicator_key, tab, year, cat1, cat1_group, cat1_group_alias, cat1_varname, cat2, cat2_group, cat2_group_alias, cat2_varname, result, lower_bound, upper_bound, se, rse, comparison_with_kc, time_trends, significance, caution, numerator, denominator, chi, run_date)
+  select(data_source, indicator_key, tab, year, cat1, cat1_group, cat1_group_alias, cat1_varname,
+         cat2, cat2_group, cat2_group_alias, cat2_varname, result, lower_bound, upper_bound, se, rse, 
+         comparison_with_kc, time_trends, significance, caution, numerator, denominator, suppression, chi, run_date)
   
   
 # delete old versions of indicators from existing BRFSS table and replace with updated data
@@ -284,4 +289,15 @@ list_of_datasets <- list("results" = brfss_updated, "metadata" = brfss_meta_upda
 currentDate <- Sys.Date()
 xlsxFileName <- paste0("//Phshare01/epe_share/WORK/CHI Visualizations/BRFSS Indicators (all)/BRFSS (all)/BRFSS_combined_tableau_suppressed_", currentDate, ".xlsx")
 write.xlsx(list_of_datasets, file = xlsxFileName)
+
+
+# write results to SQL
+tbl_id_meta <- DBI::Id(schema = "APDE_WIP", table = "brfss_metadata")
+tbl_id_results <- DBI::Id(schema = "APDE_WIP", table = "brfss_results")
+
+
+dbWriteTable(db_store, tbl_id_meta, brfss_meta_updated, overwrite = T)
+dbWriteTable(db_store, tbl_id_results, brfss_updated, overwrite = T)
+
+rm(tbl_id_meta, tbl_id_results)
 
