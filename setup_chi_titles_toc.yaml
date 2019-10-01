@@ -1,0 +1,33 @@
+schema_from: APDE_WIP
+schema_to: APDE
+titles_from: indicators_titles
+titles_to: indicators_titles
+titles_vars:
+    data_source: VARCHAR(255)
+    indicator_key: VARCHAR(255)
+    shortname: VARCHAR(255)
+    title: VARCHAR(max)
+    title_trends: VARCHAR(255)
+    tooltip_description: VARCHAR(1000)
+    tooltip_description_sample: VARCHAR(255)
+    tooltip_description_pop: VARCHAR(255)
+    summary_text_pt1: VARCHAR(1000)
+    summary_text_pt2: VARCHAR(1000)
+
+toc_from: indicators_toc
+toc_to: indicators_toc
+toc_vars:
+    data_source: VARCHAR(255)
+    indicator_key: VARCHAR(255)
+    topic_chi: VARCHAR(255)
+    topic_bsk: VARCHAR(255)
+    topic_bskhs: VARCHAR(255)
+    title_toc: VARCHAR(255)
+    description: VARCHAR(1000)
+    url_backup: VARCHAR(255)
+    latest_year_bk: VARCHAR(255)
+    latest_rate_bk: VARCHAR(255)
+    toc_bsk: FLOAT
+    toc_bskhs: FLOAT
+    toc_chi: FLOAT
+    toc_cc: VARCHAR(255)

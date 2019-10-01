@@ -1,0 +1,49 @@
+schema_from: APDE_WIP
+results_from: hys_results
+schema_to: APDE
+results_to: hys_results
+results_vars:
+    data_source: VARCHAR(255)
+    indicator_key: VARCHAR(255)
+    tab: VARCHAR(255)
+    year: VARCHAR(255)
+    cat1: VARCHAR(255)
+    cat1_group: VARCHAR(255)
+    cat1_group_alias: VARCHAR(255)
+    cat1_varname: VARCHAR(255)
+    cat2: VARCHAR(255)
+    cat2_group: VARCHAR(255)
+    cat2_group_alias: VARCHAR(255)
+    cat2_varname: VARCHAR(255)
+    result: FLOAT
+    lower_bound: FLOAT
+    upper_bound: FLOAT
+    se: FLOAT
+    rse: FLOAT
+    comparison_with_kc: VARCHAR(255)
+    time_trends: VARCHAR(255)
+    significance: VARCHAR(255)
+    caution: VARCHAR(255)
+    suppression: VARCHAR(255)
+    numerator: VARCHAR(255)
+    denominator: VARCHAR(255)
+    chi: FLOAT
+    run_date: DATE
+
+meta_from: hys_meta
+meta_to: hys_meta
+meta_vars:
+    data_source: VARCHAR(255)
+    indicator_key: VARCHAR(255)
+    result_type: VARCHAR(255)
+    valence: VARCHAR(255)
+    latest_year: VARCHAR(255)
+    latest_year_result: FLOAT
+    latest_year_kc_pop: FLOAT
+    latest_year_count: FLOAT
+    map_type: VARCHAR(255)
+    unit: VARCHAR(255)
+    valid_years: VARCHAR(255)
+    chi: FLOAT
+    run_date: DATE
+
