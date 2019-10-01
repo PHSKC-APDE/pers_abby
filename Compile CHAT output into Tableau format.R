@@ -41,11 +41,11 @@ chat_combined <- bind_rows(chat) %>%
          indicator_key = "dth801000",
          
          # Suppress counts and rates if count <5 (need to seek exemption from new suppression rules from DOH)
-         Suppress = ifelse(Count %in% (1:4), "Y", "N"),
-         Rate = ifelse(Suppress == "Y", NA_real_, Rate),
-         Count = ifelse(Suppress == "Y", NA_real_, Count),
-         Lower_bound = ifelse(Suppress == "Y", NA_real_, Lower_bound),
-         Upper_bound = ifelse(Suppress == "Y", NA_real_, Upper_bound),
+         # Suppress = ifelse(Count %in% (1:4), "Y", "N"),
+         # Rate = ifelse(Suppress == "Y", NA_real_, Rate),
+         # Count = ifelse(Suppress == "Y", NA_real_, Count),
+         # Lower_bound = ifelse(Suppress == "Y", NA_real_, Lower_bound),
+         # Upper_bound = ifelse(Suppress == "Y", NA_real_, Upper_bound),
          
          # assign geography
          Geography = case_when(
@@ -114,7 +114,7 @@ chat_combined <- bind_rows(chat) %>%
            Ethnicity == "Hispanic" ~ "race3",
            Category1 == "Race/Ethnicity" ~ "race3",
            Category1 == "Age" ~ "age5",
-           Category1 == "Sex" ~ "sex",
+           Category1 == "Gender" ~ "sex",
            Category1 == "Neighborhood Poverty" ~ "povgrp",
            Category1 == "King County regions" ~ "ccreg",
            Category1 == "Cities/Neighborhoods" ~ "hracode",
@@ -220,7 +220,8 @@ death_QA <- read.xlsx("//Phshare01/epe_share/WORK/Firearms/GV Data Workplan & Ma
   select(indicator_key:Suppress) %>% 
   filter(Tab!="Trends") %>% 
   rename("old_rate" = "Rate",
-         "Injury.Intent" = "Intent") 
+         "Injury.Intent" = "Intent") %>% 
+  mutate(Cat1varname = ifelse(Cat1varname == 'race3', 'race4', Cat1varname))
 
 
 # compare new vs. updated indicators for QA using 3-point threshold to flag changes
@@ -237,7 +238,7 @@ view(QA_groups)
 # write output to excel
 list_of_datasets <- list("results" = death_comparison, "QA" = QA_groups)
 currentDate <- Sys.Date()
-xlsxFileName <- paste0("S:/WORK/Firearms/GV Data Workplan & Materials 2018-2019/Chart Pack 1/Analysis - Chart Pack 1/FirearmDeaths_2013-2017.xlsx")
+xlsxFileName <- paste0("S:/WORK/Firearms/GV Data Workplan & Materials 2018-2019/Chart Pack 1/Analysis - Chart Pack 1/FirearmDeaths_2013-2017_nosuppress.xlsx")
 write.xlsx(list_of_datasets, file = xlsxFileName , overwrite = T)
 
 
