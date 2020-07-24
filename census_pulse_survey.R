@@ -1,15 +1,15 @@
 ## Header ####
-# Author:  Abby Schachter (based on code written by Danny Colombara)
+# Author:  Abby Schachter 
 # 
+# Created: 7/23/2020
+#
 # R version: 3.6.2
 #
-# Purpose: Data request
+# Purpose: Analysis of Census Household Pulse Survey data for CDC-funded evaluation of 
+#   economic, social, and overall health impacts of COVID-19
 #
-#  -	# and percent of people age 0-24 in King County whose families are at <100% FPL and <200% FPL
-
-# 
-# Notes: Using 5 year PUMS (2014-2018)
-#        
+# Census Pulse Survey website: https://www.census.gov/programs-surveys/household-pulse-survey/
+# Downloaded pulse survey public use files: //PHDATA01/EPE_DATA/CDC COVID19 impacts eval/Census Pulse Public CSV files
 #        
 
 ## Set up environment ----
@@ -24,8 +24,8 @@ library(data.table)
 library(srvyr)
 library(rads)
 library(tidyverse)
-library('openxlsx')
-library('zoo')
+library(openxlsx)
+library(zoo)
 
 ## get Census Household Pulse Survey data ----
 files <- list.files(path = "//PHDATA01/EPE_DATA/CDC COVID19 impacts eval/Census Pulse Public CSV files", pattern = "pulse2020_puf_*", full.names = T)
@@ -100,6 +100,7 @@ dict <- bind_rows(lapply(dict_files, load_dict))
 ## pull in data labels from data dictionary
 #data <- left_join(data, dict %>% select(variable, week, value, label), by = c("variable", "week"))
 
+# set survey design
 survey.design <-
   srvyr::as_survey_rep(
     data ,
@@ -112,6 +113,7 @@ survey.design <-
     type = "JK1"
   )
 
+# test output
 results <- rads::calc(copy(survey.design), 
                       what = c('curfoodsuf'), 
                       est_st==53, est_msa==42660, 
