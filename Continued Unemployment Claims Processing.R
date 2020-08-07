@@ -15,6 +15,11 @@ library(lubridate)
 files <- list.files(path = "//PHDATA01/EPE_DATA/CDC COVID19 impacts eval/Unemployment claims data and info/Continued Claims", pattern = "Continued Claims Week*", full.names = T)
 
 files = files[!grepl('~$', files, fixed = T)]
+latest_file = files[length(files)]
+
+demographics <- read.xlsx("//PHDATA01/EPE_DATA/CDC COVID19 impacts eval/Unemployment claims data and info/Continued Claims/Continued Claims_combined.xlsx", sheet ="Demographics", detectDates = T)
+industry <- read.xlsx("//PHDATA01/EPE_DATA/CDC COVID19 impacts eval/Unemployment claims data and info/Continued Claims/Continued Claims_combined.xlsx", sheet ="Industry", detectDates = T)
+occupation <- read.xlsx("//PHDATA01/EPE_DATA/CDC COVID19 impacts eval/Unemployment claims data and info/Continued Claims/Continued Claims_combined.xlsx", sheet ="Occupation", detectDates = T)
 
 # create function to load specific worksheets from each excel workbook
 load_sheet = function(f, sheet){
@@ -28,6 +33,7 @@ load_sheet = function(f, sheet){
   keep_cols = setdiff(keep_cols, c('Out.of.State', 'Not.Disclosed', 'State.Total'))
   dat = dat[, keep_cols]
   dat$King.County = as.numeric(dat$King.County)
+  dat$origin = f
   
   # keep only specific sheets with "Claimants" in the sheet name
   if(grepl('Claimants', sheet, fixed = T)){
@@ -79,7 +85,7 @@ run_wb = function(wbpath, sheets){
 }
 
 # create table of claims by demographics by importing all files
-demographics = bind_rows(lapply(files, function(x) run_wb(x, sheets))) %>% 
+demographics = bind_rows(demographics, run_wb(latest_file, sheets)) %>% 
   unique() %>% filter(group != 'Not Latino/Hispanic:')
 
 # clean up category and group names per APDE standard terminology
