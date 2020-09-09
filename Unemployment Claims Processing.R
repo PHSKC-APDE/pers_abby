@@ -10,11 +10,12 @@ library(readxl)
 library(tidyverse)
 library(lubridate)
 
-# 1.	Import all the excel workbooks in the folder
 
+# set file path
 file.path <- "//PHDATA01/EPE_DATA/CDC COVID19 impacts eval/Unemployment claims data and info/"
 
-files <- list.files(paste0(file.path , "Continued Claims", pattern = "Continued Claims Week*", full.names = T))
+# Import existing excel workbooks in the Continued Claims folder
+files <- list.files(paste0(file.path, "Continued Claims"), pattern = "Continued Claims Week*", full.names = T)
 
 files = files[!grepl('~$', files, fixed = T)]
 
@@ -22,6 +23,7 @@ continued_demographics <- read.xlsx(paste0(file.path, "Unemployment Claims Combi
 continued_industry <- read.xlsx(paste0(file.path, "Unemployment Claims Combined.xlsx"), sheet ="Continued NAICS", detectDates = T)
 continued_occupation <- read.xlsx(paste0(file.path, "Unemployment Claims Combined.xlsx"), sheet ="Continued SOC", detectDates = T)
 
+# identify new files not in existing data
 new_files <- setdiff(files, unique(continued_demographics$origin))
 new_files
 
@@ -124,7 +126,7 @@ demog_file <- list.files(file.path, pattern = "Initial Claims Demographics*", fu
 
   
 load_sheet_init = function(f, sheet){
-  print(paste(f,sheet, sep=': '))
+  print(paste(basename(f), sheet, sep=': '))
   
   # read in excel file
   dat = read.xlsx(f, sheet, startRow = 6, skipEmptyRows = FALSE)
@@ -209,11 +211,10 @@ demogs_combined <- demogs_initial %>% group_by(category, group) %>% summarize(cl
 # join combined totals back to metadata
 demographics_initial <- left_join(demogs_combined, demogs_initial %>% select(-group, -claimants) %>% unique(), by = c("category"))
 
-#### Import workforce demographics data ####
-
+#### Import workforce demographics data from QWI (Census quarterly workforce indicators) ####
 
 # workforce by age
-age <- read.csv(paste0(file.path, "KC Worker Demographics Q2 2019/Age.csv"), header = T) %>% 
+qwi_age <- read.csv(paste0(file.path, "KC Worker Demographics Q2 2019/Age.csv"), header = T) %>% 
   mutate(agegrp_label.value = as.character(agegrp_label.value),
          category = "Age",
          group = case_when(
@@ -226,14 +227,14 @@ age <- read.csv(paste0(file.path, "KC Worker Demographics Q2 2019/Age.csv"), hea
   select(category, group, Emp)
 
 # workforce by education
-education <- read.csv(paste0(file.path, "KC Worker Demographics Q2 2019/Education.csv"), header = ) %>% 
+qwi_education <- read.csv(paste0(file.path, "KC Worker Demographics Q2 2019/Education.csv"), header = ) %>% 
   mutate(education_label.value = as.character(education_label.value),
          category = "Education",
          group = education_label.value) %>% 
   select(category, group, Emp)
   
 # workforce by race/ethnicity
-race_ethnicity <- read.csv(paste0(file.path, "KC Worker Demographics Q2 2019/RaceEthnicity.csv"), header = T) %>% 
+qwi_race_ethnicity <- read.csv(paste0(file.path, "KC Worker Demographics Q2 2019/RaceEthnicity.csv"), header = T) %>% 
   mutate(ethnicity_label.value = as.character(ethnicity_label.value),
          category = 'Race/ethnicity',
          group = case_when(
@@ -243,20 +244,22 @@ race_ethnicity <- read.csv(paste0(file.path, "KC Worker Demographics Q2 2019/Rac
   group_by(category, group) %>% summarize(Emp = sum(Emp))
 
 # workforce by sex
-sex <- read.csv(paste0(file.path, "KC Worker Demographics Q2 2019/Sex.csv"), header = T) %>% 
+qwi_sex <- read.csv(paste0(file.path, "KC Worker Demographics Q2 2019/Sex.csv"), header = T) %>% 
   mutate(category = 'Sex',
          group = as.character(sex_label.value)) %>% 
   select(category, group, Emp)
 
-workforce_demogs <- bind_rows(age, sex, education, race_ethnicity)
+qwi_demogs <- bind_rows(qwi_age, qwi_sex, qwi_education, qwi_race_ethnicity)
 
-#### Join unemployment demographics to workforce demographics
+# Join unemployment demographics to workforce demographics
 
-demographics_initial <- left_join(demographics_initial, workforce_demogs, by = c("category","group"))
+demographics_initial <- left_join(demographics_initial, qwi_demogs, by = c("category","group"))
+
 
 ##### Initial Claims by Occupation and Industry #####
 
-initial_soc <- read.xlsx(paste0(file.path, "Initial Claims 2 Digit SOC by County Published Web.xlsx"),  sheet ="King", startRow = 6, colNames = T) %>% 
+# initial claims by occupation (2-digit SOC code)
+initial_soc <- read.xlsx(list.files(path = file.path, pattern = "Initial Claims 2 Digit SOC by County Published Web*", full.names = T),  sheet ="King", startRow = 6, colNames = T) %>% 
   gather(., key = "Week", value = "Claims", -SOC, -Occupational.Group) %>% 
   mutate(Week = gsub(".", " ", Week, fixed=T),
          Week = as.numeric(str_extract(Week, "[[:digit:]]+")),
@@ -264,8 +267,8 @@ initial_soc <- read.xlsx(paste0(file.path, "Initial Claims 2 Digit SOC by County
          date.end = ymd( "2020-01-05" ) + weeks( Week - 1 ) + 6,
          Claims = as.numeric(Claims))
 
-
-initial_naics <- read.xlsx("//PHDATA01/EPE_DATA/CDC COVID19 impacts eval/Unemployment claims data and info/Initial Claims 2 Digit NAICS by County Published Web.xlsx",  sheet ="King", startRow = 6, colNames = T) %>% 
+# initial claims by industry (2-digit NAICS code)
+initial_naics <- read.xlsx(list.files(path = file.path, pattern = "Initial Claims 2 Digit NAICS by County Published Web*", full.names = T),  sheet ="King", startRow = 6, colNames = T) %>% 
   gather(., key = "Week", value = "Claims", -NAICS, -Industry) %>% 
   mutate(Week = gsub(".", " ", Week, fixed=T),
          Week = as.numeric(str_extract(Week, "[[:digit:]]+")),
@@ -275,18 +278,19 @@ initial_naics <- read.xlsx("//PHDATA01/EPE_DATA/CDC COVID19 impacts eval/Unemplo
          NAICS = ifelse(Industry == "Government", "92", NAICS))
 
 # workforce by industry
-
-qwi_industry <- read.csv("//PHDATA01/EPE_DATA/CDC COVID19 impacts eval/Unemployment claims data and info/Employment by Industry and County Q2 2019.csv") %>% 
+qwi_industry <- read.csv(paste0(file.path, "Employment by Industry and County Q2 2019.csv")) %>% 
   mutate(NAICS = as.character(industry),
          Industry = as.character(industry_label.value)) %>% 
   select(NAICS, Emp)
 
-industry_combined <- left_join(initial_naics, qwi_industry, by = "NAICS")
+# join claims data to workforce data by industry
+initial_naics <- left_join(initial_naics, qwi_industry, by = "NAICS")
 
 
 ##### Initial & Continued Claims by ZIP Code #####
 
-claims_zip_file <- "//PHDATA01/EPE_DATA/CDC COVID19 impacts eval/Unemployment claims data and info/King County Claims by ZIP.xlsx"
+# import claims by ZIP
+claims_zip_file <- paste0(file.path, "King County Claims by ZIP.xlsx")
   
 load_sheet_zip = function(f, sheet){
     print(paste(basename(f), sheet, sep=': '))
@@ -306,7 +310,8 @@ load_sheet_zip = function(f, sheet){
 }
  
 # create list of sheets/claim types to load
-claim_types <- c("Initial claims", "Unduplicated Continued claims", "Initial PUA",  "PUA continued")
+claim_types <- c("Initial claims", "Unduplicated Continued claims", "Initial PUA",  
+                 "PUA continued", "Initial PEUC", "Continued PEUC")
 
 # load in each sheet
 claims_by_zip_list <- lapply(claim_types, function(x)(load_sheet_zip(claims_zip_file, x)))
@@ -315,13 +320,17 @@ claims_by_zip_list <- lapply(claim_types, function(x)(load_sheet_zip(claims_zip_
 claims_by_zip <- left_join(claims_by_zip_list[[1]], claims_by_zip_list[[2]]) %>%  
   left_join(., claims_by_zip_list[[3]]) %>% 
   left_join(., claims_by_zip_list[[4]]) %>% 
-  rename("Initial" = "Initial claims", Continued = "Unduplicated Continued claims", "Initial_PUA"="Initial PUA", "Continued_PUA" = "PUA continued") %>% 
+  left_join(., claims_by_zip_list[[5]]) %>% 
+  left_join(., claims_by_zip_list[[6]]) %>% 
+  rename("Initial" = "Initial claims", Continued = "Unduplicated Continued claims", "Initial_PUA"="Initial PUA", "Continued_PUA" = "PUA continued", "Initial_PEUC" = "Initial PEUC", "Continued_PEUC" = "Continued PEUC") %>% 
   select(ZIP_Code, Week, Date_Start, Date_End, everything()) %>% 
   mutate(Suppressed_initial = ifelse(Initial == "*", "^", NA_character_),
          Suppressed_initialPUA = ifelse(Initial_PUA == "*", "^", NA_character_),
+         Suppressed_initialPEUC = ifelse(Initial_PEUC == "*", "^", NA_character_),
          Suppressed_continued = ifelse(Continued == "*", "^", NA_character_),
-         Suppressed_continuedPUA = ifelse(Continued_PUA == "*", "^", NA_character_)) %>% 
-  mutate_at(vars(Initial,Initial_PUA,Continued,Continued_PUA), as.numeric)
+         Suppressed_continuedPUA = ifelse(Continued_PUA == "*", "^", NA_character_),
+         Suppressed_continuedPEUC = ifelse(Continued_PEUC == "*", "^", NA_character_)) %>% 
+  mutate_at(vars(Initial,Initial_PUA, Initial_PEUC,Continued,Continued_PUA,Continued_PEUC), as.numeric)
 
 # Bring in population age 16-64 by ZIP to calculate claims per capita
 pop_by_zip <- read.xlsx(paste0(file.path, "Population Age 16-64 by ZIP 2019.xlsx")) %>% select(ZIP, Population)
@@ -331,12 +340,14 @@ claims_by_zip <- left_join(claims_by_zip, pop_by_zip, by = c("ZIP_Code" = "ZIP")
 
 # create second version, pivoted long for Initial/PUA grouped bar chart
 claims_by_zip_long <- claims_by_zip %>% 
-  gather(., key = "Claim_Type", value = "Claims", Initial, Initial_PUA, Continued, Continued_PUA) %>% 
+  gather(., key = "Claim_Type", value = "Claims", Initial, Initial_PUA, Initial_PEUC, Continued, Continued_PUA, Continued_PEUC) %>% 
   mutate(Suppressed = case_when(
     Claim_Type == 'Initial' & Suppressed_initial == "^" ~ "^",
     Claim_Type == 'Initial_PUA ' & Suppressed_initialPUA == "^" ~ "^",
+    Claim_Type == 'Initial_PEUC ' & Suppressed_initialPEUC == "^" ~ "^",
     Claim_Type ==  'Continued' & Suppressed_continued == "^" ~ "^",
     Claim_Type ==  'Continued_PUA' & Suppressed_continuedPUA == "^" ~ "^",
+    Claim_Type ==  'Continued_PEUC' & Suppressed_continuedPEUC == "^" ~ "^",
     TRUE ~ NA_character_)) %>% 
   select(-starts_with("Suppressed_"))
 
@@ -351,21 +362,19 @@ wb <- createWorkbook()
 addWorksheet(wb, "Claims by ZIP")
 writeDataTable(wb, sheet = "Claims by ZIP", claims_by_zip, colNames = TRUE, rowNames = FALSE) # write the data to the new tab  
 
-
-# write continued claims by demographics to excel
+# write claims by ZIP (long version) to excel
 addWorksheet(wb, "Claims by ZIP 2")
 writeDataTable(wb, sheet = "Claims by ZIP 2", claims_by_zip_long, colNames = TRUE, rowNames = FALSE) # write the data to the new tab  
 
-
-# write continued claims by demographics to excel
+# write initial claims by occupation to excel
 addWorksheet(wb, "Initial Claims SOC")
 writeDataTable(wb, sheet = "Initial Claims SOC", initial_soc, colNames = TRUE, rowNames = FALSE) # write the data to the new tab  
 
-# write continued claims by demographics to excel
+# write initial claims by industry to excel
 addWorksheet(wb, "Initial Claims NAICS")
 writeDataTable(wb, sheet = "Initial Claims NAICS", initial_naics, colNames = TRUE, rowNames = FALSE) # write the data to the new tab  
 
-# write continued claims by demographics to excel
+# write initial claims by demographics to excel
 addWorksheet(wb, "Initial Demographics")
 writeDataTable(wb, sheet = "Initial Demographics", demographics_initial, colNames = TRUE, rowNames = FALSE) # write the data to the new tab  
 
